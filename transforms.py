@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Set
 from random import randrange
 import numpy as np
 
@@ -32,7 +32,7 @@ def transform(board_or_space: Union[np.ndarray, int], transform_type: int) -> Un
     """ according to the transform number,
     transform all the values on a board
     or transform the index of 1 space """
-    if isinstance(board_or_space, np.ndarray):
+    if isinstance(board_or_space, (np.ndarray, list)):
         return np.array([board_or_space[from_i] for from_i in transformations[transform_type]])
     return transformations[invert_transform[transform_type]][board_or_space]
 
@@ -53,6 +53,31 @@ def choose_transformation(board: np.ndarray) -> (int, List[int]):
     return min_t, min_board
 
 
+def equal_transformations(board: np.ndarray) -> List[int]:
+    """ returns list of all transformations
+    equally preferred to this one (7)
+    not including this one
+    (which transformations make the board look the same?) """
+    base_preference = np.dot(board, weights)
+    equals = []
+    for i in range(7):
+        this_board = transform(board, i)
+        this_preference = np.dot(this_board, weights)
+        if this_preference == base_preference:
+            equals.append(i)
+    return equals
+
+
+def equal_indexes(board: np.ndarray, index: int) -> Set[int]:
+    """ which indexes are equivalent to the given index
+    in all equal transformations """
+    e_t = equal_transformations(board)
+    to_return = { index }
+    for tran in e_t:
+        to_return.add(transform(index, tran))
+    return to_return
+
+
 def test():
     original = np.array([randrange(-1, 2) for _ in range(9)])
     # sets that were a problem for previous implementation
@@ -61,8 +86,9 @@ def test():
     # original = [1, 0, -1, 0, 0, 0, -1, 0, 1]
     # test transform
     # print(transform(original, 4))
-    assert transform(original, 4) == transform(transform(original, 5), 6)
-    assert transform(np.array([-1, 0, 0, 0, 0, 1, 0, -1, 0]), 3) == [0, -1, 0, 0, 0, 1, -1, 0, 0]
+    assert (transform(original, 4) == transform(transform(original, 5), 6)).all()
+    assert (transform(np.array([-1, 0, 0, 0, 0, 1, 0, -1, 0]), 3)
+            == [0, -1, 0, 0, 0, 1, -1, 0, 0]).all()
 
     # test choose
     print(original)
@@ -71,7 +97,13 @@ def test():
     for i in range(8):
         this_t, this_c = choose_transformation(transform(original, i))
         print(this_t, this_c)
-        assert this_c == new
+        assert (this_c == new).all()
+
+    assert equal_transformations([1, 0, 0, 0, 0, -1, 0, -1, 0]) == [0]
+    assert equal_transformations([0, 0, 0, 0, -1, 0, 0, 0, 0]) == [0, 1, 2, 3, 4, 5, 6]
+
+    assert equal_indexes([0, 0, 0, 0, -1, 0, 0, 0, 0], 2) == {0, 2, 6, 8}
+    assert equal_indexes([1, 0, 0, 0, 0, -1, 0, -1, 0], 2) == {2, 6}
 
 
 if __name__ == "__main__":

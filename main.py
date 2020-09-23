@@ -3,7 +3,7 @@ from random import random, choice
 
 import numpy as np
 
-from transforms import choose_transformation, invert_transform, transform
+from transforms import choose_transformation, invert_transform, transform, equal_indexes
 from winning import get_valid_moves, check_win, get_winning_moves, can_block
 from layer import Layer
 from network import Network
@@ -44,8 +44,9 @@ def move(board: List[int], player: int, tic_net: Network) -> int:
         if outputs[0][valid_move] > outputs[0][max_move]:
             max_move = valid_move
 
-    if random() < 1 - outputs[0][max_move]:
-        log("made a random choice from probability", 1 - outputs[0][max_move])
+    prob_of_using_max_move = (2 * outputs[0][max_move] - 1)
+    if random() < 1 - prob_of_using_max_move:
+        log("made a random choice from probability", 1 - prob_of_using_max_move)
         return choice(get_valid_moves(board))
 
     # now transform max_move back to original board
@@ -84,9 +85,15 @@ def play_a_game(tic_net: Network):
     player = 1
     for board, moved in move_record:
         # TODO: maybe, instead of 0.5, use the value that the net already predicts for that space?
-        out = [(0.5 if v == 0 else 0) for v in board]  # default: all the moves I didn't make are neutral
-        # don't know what values I should use if I'm not sure how good of a move this is
-        out[moved] = 0.9 if winner == player else (0.1 if winner == -1 * player else 0.5)
+        # default: all the moves I didn't make are neutral
+        out = [(0.5 if v == 0 else 0) for v in board]
+        # TODO: I'm not sure about putting 0 where I can't move
+        #   it seems maybe 0.5 is a better representation of "It doesn't matter."
+
+        equals = equal_indexes(board, moved)
+        for i in equals:
+            # don't know what values I should use if I'm not sure how good of a move this is
+            out[i] = 0.9 if winner == player else (0.1 if winner == -1 * player else 0.5)
 
         # overwrite that if there are winning moves or blocking moves
         winning_moves = get_winning_moves(board, player)
@@ -114,10 +121,11 @@ def play_a_game(tic_net: Network):
 
 
 def main():
+    hidden_activation = Layer.TanH
     tic_net = Network(9)
-    tic_net.add_layer(30, Layer.Sigmoid)
-    tic_net.add_layer(30, Layer.Sigmoid)
-    tic_net.add_layer(30, Layer.Sigmoid)
+    tic_net.add_layer(30, hidden_activation)
+    tic_net.add_layer(30, hidden_activation)
+    tic_net.add_layer(30, hidden_activation)
     tic_net.add_layer(9, Layer.Sigmoid)
 
     for game in range(50000):
