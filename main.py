@@ -27,7 +27,7 @@ def log(*out):
 log.logging = False
 
 
-def move(board: List[int], player: int, tic_net: Network) -> int:
+def move(board: List[int], player: int, tic_net: Network, randomness: float) -> int:
     """ return which space to put player's mark in """
     # copy board to not modify original
     board_copy = np.array(board[:])
@@ -46,7 +46,7 @@ def move(board: List[int], player: int, tic_net: Network) -> int:
         if outputs[0][valid_move] > outputs[0][max_move]:
             max_move = valid_move
 
-    prob_of_using_max_move = (2 * outputs[0][max_move] - 1)
+    prob_of_using_max_move = (outputs[0][max_move] / (randomness + 0.0000001) - 1)
     if random() < 1 - prob_of_using_max_move:
         log("made a random choice from probability", 1 - prob_of_using_max_move)
         return choice(get_valid_moves(board))
@@ -55,14 +55,16 @@ def move(board: List[int], player: int, tic_net: Network) -> int:
     return transform(max_move, invert_transform[transform_used])
 
 
-def play_a_game(tic_net: Network):
-    """ play a game, and train tic_net on data gathered from this game """
+def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: float):
+    """ Play a game, neural network against itself.
+    with_training to train tic_net on data gathered from this game
+    amount_of_randomness [0, 1] to choose moves """
     board = [0 for _ in range(9)]
     move_record: List[Tuple[List[int], int]] = []  # list of (board, move)
     winner = 0
     while True:
         # player 1
-        space = move(board, 1, tic_net)
+        space = move(board, 1, tic_net, amount_of_randomness)
         move_record.append((board[:], space))
         board[space] = 1
         log(board)
@@ -73,7 +75,7 @@ def play_a_game(tic_net: Network):
         if len(get_valid_moves(board)) == 0:
             break
         # player 2
-        space = move(board, -1, tic_net)
+        space = move(board, -1, tic_net, amount_of_randomness)
         move_record.append((board[:], space))
         board[space] = -1
         log(board)
@@ -82,7 +84,12 @@ def play_a_game(tic_net: Network):
             break
     log("winner is", winner)
 
-    # train network based on outcome
+    if with_training:
+        train(move_record, winner, tic_net)
+
+
+def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Network):
+    """ train network based on outcome """
     training_sets = []
     target_output = []
     player = 1
@@ -137,10 +144,17 @@ def main():
     tic_net.add_layer(35, hidden_activation)
     tic_net.add_layer(9, Layer.Sigmoid)
 
-    for game in range(50000):
-        log.logging = ((game % 10000 == 0) or (game > 49995))
+    game_count = 50000
+    for game in range(game_count):
+        log.logging = ((game % 10000 == 0) or (game > (game_count - 5)))
         log("game:", game)
-        play_a_game(tic_net)
+        amount_of_randomness = (1 - (game / game_count)) * 0.8
+        log("randomness:", amount_of_randomness)
+        play_a_game(tic_net, True, amount_of_randomness)
+
+
+    log.logging = True
+    play_a_game(tic_net, False, 0)
 
 
 if __name__ == "__main__":
