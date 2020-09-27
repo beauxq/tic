@@ -10,17 +10,19 @@ from network import Network
 
 
 def log(*out):
+    """ print, only if static logging is true """
     if log.logging:
         if (len(out) == 1) \
                 and isinstance(out[0], (list, np.ndarray)) \
                 and len(out[0]) == 9:
             # guess it's a tic tac toe board
-            for i, v in enumerate(out[0]):
-                print(v, end=("\n" if i % 3 == 2 else " "))
+            for i, value in enumerate(out[0]):
+                if isinstance(value, float):
+                    value = round(value, 3)
+                print(value, end=("\n" if i % 3 == 2 else " "))
             print()
         else:
             print(*out)
-
 
 log.logging = False
 
@@ -54,14 +56,15 @@ def move(board: List[int], player: int, tic_net: Network) -> int:
 
 
 def play_a_game(tic_net: Network):
+    """ play a game, and train tic_net on data gathered from this game """
     board = [0 for _ in range(9)]
     move_record: List[Tuple[List[int], int]] = []  # list of (board, move)
     winner = 0
     while True:
         # player 1
-        a = move(board, 1, tic_net)
-        move_record.append((board[:], a))
-        board[a] = 1
+        space = move(board, 1, tic_net)
+        move_record.append((board[:], space))
+        board[space] = 1
         log(board)
         if check_win(board, 1):
             winner = 1
@@ -70,9 +73,9 @@ def play_a_game(tic_net: Network):
         if len(get_valid_moves(board)) == 0:
             break
         # player 2
-        a = move(board, -1, tic_net)
-        move_record.append((board[:], a))
-        board[a] = -1
+        space = move(board, -1, tic_net)
+        move_record.append((board[:], space))
+        board[space] = -1
         log(board)
         if check_win(board, -1):
             winner = -1
@@ -84,25 +87,31 @@ def play_a_game(tic_net: Network):
     target_output = []
     player = 1
     for board, moved in move_record:
+        valid_moves = get_valid_moves(board)
+        # for moves I could have taken but didn't
+        default_value = 0.4 if player == winner else (0.6 if winner == (-1 * player) else 0.5)
         # TODO: maybe, instead of 0.5, use the value that the net already predicts for that space?
-        # default: all the moves I didn't make are neutral
-        out = [(0.5 if v == 0 else 0) for v in board]
-        # TODO: I'm not sure about putting 0 where I can't move
-        #   it seems maybe 0.5 is a better representation of "It doesn't matter."
+        out = [(default_value if v == 0 else 0.5) for v in board]
 
         equals = equal_indexes(board, moved)
         for i in equals:
             # don't know what values I should use if I'm not sure how good of a move this is
-            out[i] = 0.9 if winner == player else (0.1 if winner == -1 * player else 0.5)
+            out[i] = 0.9 if winner == player else (0.1 if winner == (-1 * player) else 0.5)
 
-        # overwrite that if there are winning moves or blocking moves
+        # overwrite that if there are winning moves or blocking moves or only 1 possible move
         winning_moves = get_winning_moves(board, player)
         if len(winning_moves) > 0:
-            out = [1 if i in winning_moves else 0 for i in range(9)]
+            out = [1 if i in winning_moves else (0 if (i in valid_moves) else 0.5)
+                   for i in range(9)]
         else:  # no winning moves
             can, blocking_move = can_block(board, player)
             if can:
-                out = [1 if i == blocking_move else 0 for i in range(9)]
+                out = [1 if i == blocking_move else (0 if (i in valid_moves) else 0.5)
+                       for i in range(9)]
+            else:  # no wining moves and no blocking moves
+                if len(valid_moves) == 1:
+                    log("only 1 valid on this board")
+                    out[valid_moves[0]] = 1
 
         board_copy = np.array(board[:])
         board_copy *= player
@@ -117,19 +126,19 @@ def play_a_game(tic_net: Network):
 
         player *= -1
 
-    tic_net.train(np.array(training_sets), np.array(target_output), 1, 0.0625, int(log.logging))
+    tic_net.train(np.array(training_sets), np.array(target_output), 1, 0.0625, log.logging)
 
 
 def main():
-    hidden_activation = Layer.TanH
+    hidden_activation = Layer.TruncatedSQRT
     tic_net = Network(9)
-    tic_net.add_layer(30, hidden_activation)
-    tic_net.add_layer(30, hidden_activation)
-    tic_net.add_layer(30, hidden_activation)
+    tic_net.add_layer(45, hidden_activation)
+    tic_net.add_layer(40, hidden_activation)
+    tic_net.add_layer(35, hidden_activation)
     tic_net.add_layer(9, Layer.Sigmoid)
 
     for game in range(50000):
-        log.logging = ((game % 1000 == 0) or (game > 49995))
+        log.logging = ((game % 10000 == 0) or (game > 49995))
         log("game:", game)
         play_a_game(tic_net)
 
