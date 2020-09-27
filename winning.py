@@ -1,3 +1,5 @@
+""" utility functions related to plays in the game of tic-tac-toe """
+
 from typing import List
 
 possible_win_sets = (
@@ -54,7 +56,7 @@ def can_block(board: List[int], player: int) -> (bool, int):
     return len(winning_moves) == 1, winning_moves[0] if len(winning_moves) == 1 else -1
 
 
-def test():
+def _test():
     assert check_win([0, 1, 0, 0, 1, 0, 0, 1, 0], 1)
     assert not check_win([0, 1, 0, 0, -1, 0, 0, 1, 0], 1)
     assert check_win([0, 1, -1, 0, -1, 0, -1, 1, 0], -1)
@@ -74,4 +76,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    _test()

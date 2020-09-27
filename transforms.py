@@ -1,3 +1,11 @@
+"""
+There are 7 transformations (8 if you count the null transformation -
+leaving the board as it is) that can be made on a tic-tac-toe board
+without changing the state of the game.
+This module defines an arbitrary preference among those transformations
+so the neural network only needs to learn one of them.
+"""
+
 from typing import List, Union, Set
 from random import randrange
 import numpy as np
@@ -28,10 +36,11 @@ invert_transform = (0, 1, 2, 3, 6, 5, 4, 7)
 weights = tuple(3**i for i in range(1, 10))
 
 
-def transform(board_or_space: Union[np.ndarray, int], transform_type: int) -> Union[np.ndarray, int]:
+def transform(board_or_space: Union[np.ndarray, int],
+              transform_type: int) -> Union[np.ndarray, int]:
     """ according to the transform number,
     transform all the values on a board
-    or transform the index of 1 space """
+    or (overload) transform the index of 1 space """
     if isinstance(board_or_space, (np.ndarray, list)):
         return np.array([board_or_space[from_i] for from_i in transformations[transform_type]])
     return transformations[invert_transform[transform_type]][board_or_space]
@@ -72,13 +81,13 @@ def equal_indexes(board: np.ndarray, index: int) -> Set[int]:
     """ which indexes are equivalent to the given index
     in all equal transformations """
     e_t = equal_transformations(board)
-    to_return = { index }
+    to_return = {index}
     for tran in e_t:
         to_return.add(transform(index, tran))
     return to_return
 
 
-def test():
+def _test():
     original = np.array([randrange(-1, 2) for _ in range(9)])
     # sets that were a problem for previous implementation
     # original = [-1, -1, 0, 0, -1, 0, 1, 0, -1]
@@ -107,4 +116,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    _test()
