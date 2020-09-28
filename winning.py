@@ -1,6 +1,7 @@
 """ utility functions related to plays in the game of tic-tac-toe """
 
-from typing import List
+from typing import List, Set
+import numpy as np
 
 possible_win_sets = (
     # horizontal lines
@@ -29,9 +30,9 @@ def check_win(board: List[int], player: int) -> bool:
     return False
 
 
-def get_valid_moves(board):
+def get_valid_moves(board) -> Set[int]:
     """ places not already taken by a player """
-    return [i for i, v in enumerate(board) if v == 0]
+    return {i for i, v in enumerate(board) if v == 0}
 
 
 def get_winning_moves(board: List[int], player: int) -> List[int]:
@@ -40,7 +41,7 @@ def get_winning_moves(board: List[int], player: int) -> List[int]:
     to_return = []
     empty_spaces = get_valid_moves(board)
     for space_i in empty_spaces:
-        new_board = board[:]
+        new_board = np.copy(board)
         new_board[space_i] = player
         if check_win(new_board, player):
             to_return.append(space_i)

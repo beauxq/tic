@@ -30,7 +30,7 @@ log.logging = False
 def move(board: List[int], player: int, tic_net: Network, randomness: float) -> int:
     """ return which space to put player's mark in """
     # copy board to not modify original
-    board_copy = np.array(board[:])
+    board_copy = np.copy(board)
     # make it so I am player 1
     board_copy *= player
     # work with preferred transformation
@@ -41,7 +41,7 @@ def move(board: List[int], player: int, tic_net: Network, randomness: float) -> 
     outputs = tic_net.predict(np.array([preferred_transformation]))
     log(outputs[0])
     valid_moves = get_valid_moves(preferred_transformation)
-    max_move = valid_moves[0]
+    max_move = next(iter(valid_moves))
     for valid_move in valid_moves:
         if outputs[0][valid_move] > outputs[0][max_move]:
             max_move = valid_move
@@ -49,7 +49,7 @@ def move(board: List[int], player: int, tic_net: Network, randomness: float) -> 
     prob_of_using_max_move = (outputs[0][max_move] / (randomness + 0.0000001) - 1)
     if random() < 1 - prob_of_using_max_move:
         log("made a random choice from probability", 1 - prob_of_using_max_move)
-        return choice(get_valid_moves(board))
+        return choice(tuple(get_valid_moves(board)))
 
     # now transform max_move back to original board
     return transform(max_move, invert_transform[transform_used])
@@ -65,7 +65,7 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
     while True:
         # player 1
         space = move(board, 1, tic_net, amount_of_randomness)
-        move_record.append((board[:], space))
+        move_record.append((np.copy(board), space))
         board[space] = 1
         log(board)
         if check_win(board, 1):
@@ -76,7 +76,7 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
             break
         # player 2
         space = move(board, -1, tic_net, amount_of_randomness)
-        move_record.append((board[:], space))
+        move_record.append((np.copy(board), space))
         board[space] = -1
         log(board)
         if check_win(board, -1):
@@ -118,9 +118,9 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
             else:  # no wining moves and no blocking moves
                 if len(valid_moves) == 1:
                     log("only 1 valid on this board")
-                    out[valid_moves[0]] = 1
+                    out[next(iter(valid_moves))] = 1
 
-        board_copy = np.array(board[:])
+        board_copy = np.copy(board)
         board_copy *= player
         transform_used, preferred_transform_of_board = choose_transformation(board_copy)
         transformed_output = transform(np.array(out), transform_used)
