@@ -95,25 +95,27 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
     player = 1
     for board, moved in move_record:
         valid_moves = get_valid_moves(board)
+        tie_value = 0.5  # target output for training data leading to tie
+        invalid_value = 0.5  # target output for training data of invalid move
         # for moves I could have taken but didn't
-        default_value = 0.4 if player == winner else (0.6 if winner == (-1 * player) else 0.5)
+        default_value = 0.4 if player == winner else (0.6 if winner == (-1 * player) else tie_value)
         # TODO: maybe, instead of 0.5, use the value that the net already predicts for that space?
-        out = [(default_value if v == 0 else 0.5) for v in board]
+        out = [(default_value if v == 0 else invalid_value) for v in board]
 
         equals = equal_indexes(board, moved)
         for i in equals:
             # don't know what values I should use if I'm not sure how good of a move this is
-            out[i] = 0.9 if winner == player else (0.1 if winner == (-1 * player) else 0.5)
+            out[i] = 0.9 if winner == player else (0.1 if winner == (-1 * player) else tie_value)
 
         # overwrite that if there are winning moves or blocking moves or only 1 possible move
         winning_moves = get_winning_moves(board, player)
         if len(winning_moves) > 0:
-            out = [1 if i in winning_moves else (0 if (i in valid_moves) else 0.5)
+            out = [1 if i in winning_moves else (0 if (i in valid_moves) else invalid_value)
                    for i in range(9)]
         else:  # no winning moves
             can, blocking_move = can_block(board, player)
             if can:
-                out = [1 if i == blocking_move else (0 if (i in valid_moves) else 0.5)
+                out = [1 if i == blocking_move else (0 if (i in valid_moves) else invalid_value)
                        for i in range(9)]
             else:  # no wining moves and no blocking moves
                 if len(valid_moves) == 1:
@@ -139,16 +141,16 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
 def main():
     hidden_activation = Layer.TruncatedSQRT
     tic_net = Network(9)
-    tic_net.add_layer(45, hidden_activation)
-    tic_net.add_layer(40, hidden_activation)
-    tic_net.add_layer(35, hidden_activation)
+    tic_net.add_layer(30, hidden_activation)
+    tic_net.add_layer(30, hidden_activation)
+    tic_net.add_layer(30, hidden_activation)
     tic_net.add_layer(9, Layer.Sigmoid)
 
     game_count = 50000
     for game in range(game_count):
-        log.logging = ((game % 10000 == 0) or (game > (game_count - 5)))
+        log.logging = ((game % 1000 == 0) or (game > (game_count - 5)))
         log("game:", game)
-        amount_of_randomness = (1 - (game / game_count)) * 0.8
+        amount_of_randomness = (1 - (0.875 * game / game_count))
         log("randomness:", amount_of_randomness)
         play_a_game(tic_net, True, amount_of_randomness)
 
