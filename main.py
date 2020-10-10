@@ -98,7 +98,7 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
         tie_value = 0.5  # target output for training data leading to tie
         invalid_value = 0.5  # target output for training data of invalid move
         # for moves I could have taken but didn't
-        default_value = 0.4 if player == winner else (0.6 if winner == (-1 * player) else tie_value)
+        default_value = 0.3 if player == winner else (tie_value if winner == (-1 * player) else tie_value)
         # TODO: maybe, instead of 0.5, use the value that the net already predicts for that space?
         out = [(default_value if v == 0 else invalid_value) for v in board]
 
@@ -150,7 +150,7 @@ def main():
     for game in range(game_count):
         log.logging = ((game % 1000 == 0) or (game > (game_count - 5)))
         log("game:", game)
-        amount_of_randomness = (1 - (0.875 * game / game_count))
+        amount_of_randomness = (1 - (0.75 * game / game_count))
         log("randomness:", amount_of_randomness)
         play_a_game(tic_net, True, amount_of_randomness)
 
