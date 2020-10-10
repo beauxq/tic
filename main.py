@@ -19,6 +19,8 @@ def log(*out):
             for i, value in enumerate(out[0]):
                 if isinstance(value, float):
                     value = round(value, 3)
+                elif value > -1:
+                    value = " " + str(value)
                 print(value, end=("\n" if i % 3 == 2 else " "))
             print()
         else:
@@ -27,7 +29,7 @@ def log(*out):
 log.logging = False
 
 
-def move(board: List[int], player: int, tic_net: Network, randomness: float) -> int:
+def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: float) -> int:
     """ return which space to put player's mark in """
     # copy board to not modify original
     board_copy = np.copy(board)
@@ -55,16 +57,41 @@ def move(board: List[int], player: int, tic_net: Network, randomness: float) -> 
     return transform(max_move, invert_transform[transform_used])
 
 
-def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: float):
+def get_human_move(board):
+    log_temp = log.logging
+    log.logging = True
+
+    log(board)
+    answer = -1
+    while not (isinstance(answer, int) and -1 < answer < 9):
+        try:
+            answer = int(input("space? [0-8] "))
+            if board[answer] != 0:
+                raise "no"
+        except:
+            pass
+
+    log.logging = log_temp
+    return answer
+
+
+def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: float, human: int):
     """ Play a game, neural network against itself.
-    with_training to train tic_net on data gathered from this game
-    amount_of_randomness [0, 1] to choose moves """
+
+    `with_training` to train `tic_net` on data gathered from this game
+    
+    `amount_of_randomness` [0, 1] to choose moves
+
+    `human` is 1 or -1 or 0, for first, second, or no human """
     board = [0 for _ in range(9)]
     move_record: List[Tuple[List[int], int]] = []  # list of (board, move)
     winner = 0
     while True:
         # player 1
-        space = move(board, 1, tic_net, amount_of_randomness)
+        if human == 1:
+            space = get_human_move(board)
+        else:
+            space = get_ai_move(board, 1, tic_net, amount_of_randomness)
         move_record.append((np.copy(board), space))
         board[space] = 1
         log(board)
@@ -75,7 +102,10 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
         if len(get_valid_moves(board)) == 0:
             break
         # player 2
-        space = move(board, -1, tic_net, amount_of_randomness)
+        if human == -1:
+            space = get_human_move(board)
+        else:
+            space = get_ai_move(board, -1, tic_net, amount_of_randomness)
         move_record.append((np.copy(board), space))
         board[space] = -1
         log(board)
@@ -138,6 +168,16 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
     tic_net.train(np.array(training_sets), np.array(target_output), 1, 0.0625, log.logging)
 
 
+def play_with_human(tic_net):
+    answer = input("you want to go first? (y/n)").lower()
+    if (answer and (answer[0] == "n")):
+        player = -1
+    else:
+        player = 1
+    print("you are", player)
+    play_a_game(tic_net, False, 0, player)
+
+
 def main():
     hidden_activation = Layer.TruncatedSQRT
     tic_net = Network(9)
@@ -152,11 +192,19 @@ def main():
         log("game:", game)
         amount_of_randomness = (1 - (0.75 * game / game_count))
         log("randomness:", amount_of_randomness)
-        play_a_game(tic_net, True, amount_of_randomness)
+        play_a_game(tic_net, True, amount_of_randomness, 0)
 
 
     log.logging = True
-    play_a_game(tic_net, False, 0)
+    play_a_game(tic_net, False, 0, 0)
+
+    # human
+    answer = input("play? (y/n) ").lower()
+    while (not answer) or (answer[0] != "n"):
+        play_with_human(tic_net)
+        answer = input("again? (y/n) ").lower()
+    
+    # log(tic_net)
 
 
 if __name__ == "__main__":
