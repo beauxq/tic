@@ -95,10 +95,10 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
     player = 1
     for board, moved in move_record:
         valid_moves = get_valid_moves(board)
-        tie_value = 0.5  # target output for training data leading to tie
+        tie_value = 0.7  # target output for training data leading to tie
         invalid_value = 0.5  # target output for training data of invalid move
         # for moves I could have taken but didn't
-        default_value = 0.3 if player == winner else (tie_value if winner == (-1 * player) else tie_value)
+        default_value = 0.3 if player == winner else (0.5 if winner == (-1 * player) else 0.5)
         # TODO: maybe, instead of 0.5, use the value that the net already predicts for that space?
         out = [(default_value if v == 0 else invalid_value) for v in board]
 
@@ -146,7 +146,7 @@ def main():
     tic_net.add_layer(30, hidden_activation)
     tic_net.add_layer(9, Layer.Sigmoid)
 
-    game_count = 50000
+    game_count = 60000
     for game in range(game_count):
         log.logging = ((game % 1000 == 0) or (game > (game_count - 5)))
         log("game:", game)
