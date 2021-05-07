@@ -67,8 +67,8 @@ def get_human_move(board):
         try:
             answer = int(input("space? [0-8] "))
             if board[answer] != 0:
-                raise "no"
-        except:
+                raise ValueError
+        except ValueError:
             pass
 
     log.logging = log_temp
@@ -79,7 +79,7 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
     """ Play a game, neural network against itself.
 
     `with_training` to train `tic_net` on data gathered from this game
-    
+
     `amount_of_randomness` [0, 1] to choose moves
 
     `human` is 1 or -1 or 0, for first, second, or no human """

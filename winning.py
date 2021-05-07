@@ -1,6 +1,6 @@
 """ utility functions related to plays in the game of tic-tac-toe """
 
-from typing import List, Set
+from typing import List, Set, Tuple
 import numpy as np
 
 possible_win_sets = (
@@ -48,7 +48,7 @@ def get_winning_moves(board: List[int], player: int) -> List[int]:
     return to_return
 
 
-def can_block(board: List[int], player: int) -> (bool, int):
+def can_block(board: List[int], player: int) -> Tuple[bool, int]:
     """ returns whether player can make a move
     to block the other from winning
     and what space that move is in """
