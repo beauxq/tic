@@ -7,27 +7,10 @@ from transforms import choose_transformation, invert_transform, transform, equal
 from winning import get_valid_moves, check_win, get_winning_moves, can_block
 from layer import Layer
 from network import Network
+from logger import Logger
 
-
-def log(*out):
-    """ print, only if static logging is true """
-    if log.logging:
-        if (len(out) == 1) \
-                and isinstance(out[0], (list, np.ndarray)) \
-                and len(out[0]) == 9:
-            # guess it's a tic tac toe board
-            for i, value in enumerate(out[0]):
-                if isinstance(value, float):
-                    value = round(value, 3)
-                elif value > -1:
-                    value = " " + str(value)
-                print(value, end=("\n" if i % 3 == 2 else " "))
-            print()
-        else:
-            print(*out)
-
-log.logging = False
-
+L = Logger()
+L.logging = False
 
 def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: float) -> int:
     """ return which space to put player's mark in """
@@ -37,11 +20,11 @@ def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: flo
     board_copy *= player
     # work with preferred transformation
     transform_used, preferred_transformation = choose_transformation(board_copy)
-    log("preferred transform:")
-    log(preferred_transformation)
+    L.log("preferred transform:")
+    L.log(preferred_transformation)
 
     outputs = tic_net.predict(np.array([preferred_transformation]))
-    log(outputs[0])
+    L.log(outputs[0])
     valid_moves = get_valid_moves(preferred_transformation)
     max_move = next(iter(valid_moves))
     for valid_move in valid_moves:
@@ -50,7 +33,7 @@ def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: flo
 
     prob_of_using_max_move = (outputs[0][max_move] / (randomness + 0.0000001) - 1)
     if random() < 1 - prob_of_using_max_move:
-        log("made a random choice from probability", 1 - prob_of_using_max_move)
+        L.log("made a random choice from probability", 1 - prob_of_using_max_move)
         return choice(tuple(get_valid_moves(board)))
 
     # now transform max_move back to original board
@@ -58,10 +41,10 @@ def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: flo
 
 
 def get_human_move(board):
-    log_temp = log.logging
-    log.logging = True
+    log_temp = L.logging
+    L.logging = True
 
-    log(board)
+    L.log(board)
     answer = -1
     while not (isinstance(answer, int) and -1 < answer < 9):
         try:
@@ -71,7 +54,7 @@ def get_human_move(board):
         except ValueError:
             pass
 
-    log.logging = log_temp
+    L.logging = log_temp
     return answer
 
 
@@ -94,7 +77,7 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
             space = get_ai_move(board, 1, tic_net, amount_of_randomness)
         move_record.append((np.copy(board), space))
         board[space] = 1
-        log(board)
+        L.log(board)
         if check_win(board, 1):
             winner = 1
             break
@@ -108,11 +91,11 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
             space = get_ai_move(board, -1, tic_net, amount_of_randomness)
         move_record.append((np.copy(board), space))
         board[space] = -1
-        log(board)
+        L.log(board)
         if check_win(board, -1):
             winner = -1
             break
-    log("winner is", winner)
+    L.log("winner is", winner)
 
     if with_training:
         train(move_record, winner, tic_net)
@@ -149,7 +132,7 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
                        for i in range(9)]
             else:  # no wining moves and no blocking moves
                 if len(valid_moves) == 1:
-                    log("only 1 valid on this board")
+                    L.log("only 1 valid on this board")
                     out[next(iter(valid_moves))] = 1
 
         board_copy = np.copy(board)
@@ -157,15 +140,15 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
         transform_used, preferred_transform_of_board = choose_transformation(board_copy)
         transformed_output = transform(np.array(out), transform_used)
 
-        log("training:")
-        log(preferred_transform_of_board)
-        log(transformed_output)
+        L.log("training:")
+        L.log(preferred_transform_of_board)
+        L.log(transformed_output)
         training_sets.append(preferred_transform_of_board)
         target_output.append(transformed_output)
 
         player *= -1
 
-    tic_net.train(np.array(training_sets), np.array(target_output), 1, 0.0625, log.logging)
+    tic_net.train(np.array(training_sets), np.array(target_output), 1, 0.0625, L.logging)
 
 
 def play_with_human(tic_net):
@@ -188,14 +171,14 @@ def main():
 
     game_count = 60000
     for game in range(game_count):
-        log.logging = ((game % 1000 == 0) or (game > (game_count - 5)))
-        log("game:", game)
+        L.logging = ((game % 1000 == 0) or (game > (game_count - 5)))
+        L.log("game:", game)
         amount_of_randomness = (1 - (0.75 * game / game_count))
-        log("randomness:", amount_of_randomness)
+        L.log("randomness:", amount_of_randomness)
         play_a_game(tic_net, True, amount_of_randomness, 0)
 
 
-    log.logging = True
+    L.logging = True
     play_a_game(tic_net, False, 0, 0)
 
     # human
@@ -203,7 +186,7 @@ def main():
     while (not answer) or (answer[0] != "n"):
         play_with_human(tic_net)
         answer = input("again? (y/n) ").lower()
-    
+
     # log(tic_net)
 
 
