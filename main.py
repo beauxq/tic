@@ -3,14 +3,16 @@ from random import random, choice
 
 import numpy as np
 
-from transforms import choose_transformation, invert_transform, transform, equal_indexes
-from winning import get_valid_moves, check_win, get_winning_moves, can_block
-from layer import Layer
-from network import Network
+from ann.layer import Layer
+from ann.network import Network
+
 from logger import Logger
+from transforms import BoardType, NPArray, choose_transformation, invert_transform, transform, equal_indexes
+from winning import get_valid_moves, check_win, get_winning_moves, can_block
 
 L = Logger()
 L.logging = False
+
 
 def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: float) -> int:
     """ return which space to put player's mark in """
@@ -40,13 +42,13 @@ def get_ai_move(board: List[int], player: int, tic_net: Network, randomness: flo
     return transform(max_move, invert_transform[transform_used])
 
 
-def get_human_move(board):
+def get_human_move(board: BoardType):
     log_temp = L.logging
     L.logging = True
 
     L.log(board)
     answer = -1
-    while not (isinstance(answer, int) and -1 < answer < 9):
+    while not (-1 < answer < 9):
         try:
             answer = int(input("space? [0-8] "))
             if board[answer] != 0:
@@ -67,7 +69,7 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
 
     `human` is 1 or -1 or 0, for first, second, or no human """
     board = [0 for _ in range(9)]
-    move_record: List[Tuple[List[int], int]] = []  # list of (board, move)
+    move_record: List[Tuple[BoardType, int]] = []  # list of (board, move)
     winner = 0
     while True:
         # player 1
@@ -101,10 +103,10 @@ def play_a_game(tic_net: Network, with_training: bool, amount_of_randomness: flo
         train(move_record, winner, tic_net)
 
 
-def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Network):
+def train(move_record: List[Tuple[BoardType, int]], winner: int, tic_net: Network):
     """ train network based on outcome """
-    training_sets = []
-    target_output = []
+    training_sets: list[NPArray] = []
+    target_output: list[NPArray] = []
     player = 1
     for board, moved in move_record:
         valid_moves = get_valid_moves(board)
@@ -151,7 +153,7 @@ def train(move_record: List[Tuple[List[int], int]], winner: int, tic_net: Networ
     tic_net.train(np.array(training_sets), np.array(target_output), 1, 0.0625, L.logging)
 
 
-def play_with_human(tic_net):
+def play_with_human(tic_net: Network):
     answer = input("you want to go first? (y/n)").lower()
     if (answer and (answer[0] == "n")):
         player = -1
@@ -176,7 +178,6 @@ def main():
         amount_of_randomness = (1 - (0.75 * game / game_count))
         L.log("randomness:", amount_of_randomness)
         play_a_game(tic_net, True, amount_of_randomness, 0)
-
 
     L.logging = True
     play_a_game(tic_net, False, 0, 0)

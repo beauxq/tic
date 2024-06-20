@@ -1,7 +1,4 @@
 .idea
 .vscode
 __pycache__
-
-# links to a different repository
-layer.py
-network.py
+.venv*

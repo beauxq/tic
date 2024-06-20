@@ -1,7 +1,12 @@
 """ utility functions related to plays in the game of tic-tac-toe """
 
-from typing import List, Set, Tuple
+from typing import TYPE_CHECKING, List, Set, Tuple
 import numpy as np
+
+from transforms import BoardType
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsGetItem
 
 possible_win_sets = (
     # horizontal lines
@@ -18,7 +23,7 @@ possible_win_sets = (
 )
 
 
-def check_win(board: List[int], player: int) -> bool:
+def check_win(board: "SupportsGetItem[int, float]", player: int) -> bool:
     """ player is 1 or -1 """
     target = 3 * player
     for win in possible_win_sets:
@@ -30,15 +35,15 @@ def check_win(board: List[int], player: int) -> bool:
     return False
 
 
-def get_valid_moves(board) -> Set[int]:
+def get_valid_moves(board: BoardType) -> Set[int]:
     """ places not already taken by a player """
     return {i for i, v in enumerate(board) if v == 0}
 
 
-def get_winning_moves(board: List[int], player: int) -> List[int]:
+def get_winning_moves(board: BoardType, player: int) -> List[int]:
     """ indexes where player could go to win
         - player is 1 or -1 """
-    to_return = []
+    to_return: list[int] = []
     empty_spaces = get_valid_moves(board)
     for space_i in empty_spaces:
         new_board = np.copy(board)
@@ -48,7 +53,7 @@ def get_winning_moves(board: List[int], player: int) -> List[int]:
     return to_return
 
 
-def can_block(board: List[int], player: int) -> Tuple[bool, int]:
+def can_block(board: BoardType, player: int) -> Tuple[bool, int]:
     """ returns whether player can make a move
     to block the other from winning
     and what space that move is in """

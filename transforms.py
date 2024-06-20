@@ -6,9 +6,14 @@ This module defines an arbitrary preference among those transformations
 so the neural network only needs to learn one of them.
 """
 
-from typing import List, Set, Tuple, TypeVar
 from random import randrange
+from typing import Any, List, Set, Tuple, overload
+
 import numpy as np
+
+NPArray = np.ndarray[Any, Any]
+
+BoardType = NPArray | list[int]
 
 transformations = (
     # flip on \
@@ -35,9 +40,17 @@ invert_transform = (0, 1, 2, 3, 6, 5, 4, 7)
 # to give a preferred transformation
 weights = tuple(3**i for i in range(1, 10))
 
-T = TypeVar('T', np.ndarray, int)
-def transform(board_or_space: T,
-              transform_type: int) -> T:
+
+@overload
+def transform(board_or_space: int, transform_type: int) -> int: ...
+
+
+@overload
+def transform(board_or_space: NPArray | list[float], transform_type: int) -> NPArray: ...
+
+
+def transform(board_or_space: int | NPArray | list[float],
+              transform_type: int) -> int | NPArray:
     """ according to the transform number,
     transform all the values on a board
     or (overload) transform the index of 1 space """
@@ -46,7 +59,7 @@ def transform(board_or_space: T,
     return transformations[invert_transform[transform_type]][board_or_space]
 
 
-def choose_transformation(board: np.ndarray) -> Tuple[int, np.ndarray]:
+def choose_transformation(board: NPArray) -> Tuple[int, NPArray]:
     """ returns a tuple of
     (which transform is preferred (int), that transformation (board)) """
     min_t = 7
@@ -61,14 +74,14 @@ def choose_transformation(board: np.ndarray) -> Tuple[int, np.ndarray]:
             min_board = this_board
     return min_t, min_board
 
-BoardType = TypeVar('BoardType', np.ndarray, List[int])
+
 def equal_transformations(board: BoardType) -> List[int]:
     """ returns list of all transformations
     equally preferred to this one (7)
     not including this one
     (which transformations make the board look the same?) """
     base_preference = np.dot(board, weights)
-    equals = []
+    equals: list[int] = []
     for i in range(7):
         this_board = transform(np.array(board), i)
         this_preference = np.dot(this_board, weights)

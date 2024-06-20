@@ -1,10 +1,13 @@
+from typing import Any
+
 import numpy as np
+
 
 class Logger:
     def __init__(self):
         self.logging = False
 
-    def log(self, *out):
+    def log(self, *out: list[float] | np.ndarray[Any, Any] | Any) -> None:
         """ print, only if logging is true """
         if self.logging:
             if (len(out) == 1) \

@@ -1,8 +1,9 @@
 teaching an artificial neural network to play tic tac toe
 
 uses layer and network modules from https://github.com/beauxq/learn-ann
+(`$ pip install -r requirements.txt`)
 
-
+---
 
 At one point, after lots of training, the neural network found themself as `X` in this situation:
 
